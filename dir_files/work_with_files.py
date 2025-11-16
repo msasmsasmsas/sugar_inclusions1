@@ -1,5 +1,9 @@
 import os
+import logging
 
+
+logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 main_path = '\\images\\cams'
 
 # key names will be folder names!
@@ -70,14 +74,19 @@ def sort_files(folder_path,new_path):
                 #os.rename(file_path, f'{new_path}\\{file_name}')
 
 def sort_files_by_date(folder_path,new_path):
-    file_list = os.listdir(folder_path)
-    full_list = [os.path.join(folder_path, i) for i in file_list]
-    time_sorted_list = sorted(full_list, key = os.path.getmtime)
-
-    new_path_file = ''
-    if time_sorted_list:
-        new_path_file = new_path + os.path.basename(time_sorted_list[0])
-        os.rename(time_sorted_list[0],new_path_file)
+    print(f' {folder_path} {new_path}')
+    try:
+        file_list = os.listdir(folder_path)
+        full_list = [os.path.join(folder_path, i) for i in file_list]
+        time_sorted_list = sorted(full_list, key = os.path.getmtime)
+        print(f' {folder_path} {new_path}')
+        new_path_file = ''
+        if time_sorted_list:
+            new_path_file = new_path + os.path.basename(time_sorted_list[0])
+            os.rename(time_sorted_list[0],new_path_file)
+    except OSError as e:
+        logger.error(f"Ошибка обработки файла : {e}")
+    print(f' {new_path_file} ')
     return new_path_file
 
 def remove_empty_folders(folder_path):
