@@ -1,0 +1,13 @@
+train: ../train/images
+val: ../valid/images
+test: ../test/images
+
+nc: 7
+names: ['hiden_trash', 'metal_trash', 'partlyhiden_trash', 'rag_trash', 'red_trash', 'rope_trash', 'shugar_trash']
+
+roboflow:
+  workspace: project
+  project: inclusions_v1
+  version: 1
+  license: CC BY 4.0
+  url: https://universe.roboflow.com/project/inclusions_v1/dataset/1

@@ -1,0 +1,7 @@
+names:
+- arm
+- trash
+nc: 2
+path: /content/inclusions
+train: /content/inclusions/train
+val: /content/inclusions/valid

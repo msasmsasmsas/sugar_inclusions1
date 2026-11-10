@@ -71,7 +71,7 @@ COPY input ./input
 COPY images/shem_yolov9 ./images/shem_yolov9
 
 # Создание необходимых директорий
-RUN mkdir -p images/for_detection images/for_marking images/marked images/source images/detected output/csv output/logs output/marked
+RUN mkdir -p images/for_detection images/for_marking images/for_marking_mask images/marked images/source images/detected output/csv output/logs output/marked
 
 # Команда запуска приложения
 CMD ["python", "predict_yolo5.py"]

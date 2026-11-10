@@ -10,7 +10,7 @@ import os
 # Імпортуємо централізовану конфігурацію
 from env_config import (
     ENV_LEVEL, USE_DB, MODEL_VERSION,
-    SAVE_RESULTS_FOR_MARKINGS, SAVE_DETECTED_IMAGES,
+    SAVE_RESULTS_FOR_MARKINGS, SAVE_DETECTED_IMAGES, SAVE_MASKED_IMAGES,
     SHOW_RESULTS, SAVE_RESULTS, TELEGRAM_TOKEN,
     TELEGRAM_CHANNEL_ID, TELEGRAM_CHANNEL_ID_KOVNIR,
     TELEGRAM_CHANNEL_ID_JSZ, PERIOD_ROTATION, CSV_ROTATION,
@@ -77,11 +77,11 @@ if ENV_LEVEL == 'prod':
         },
         "JCZ": {
             "Location": "Яреськи",
-            "type_cam": "dahua",
+            "type_cam": "hikvision",
             #"camera_ip": "10.20.2.250:10086",
             "camera_ip": "10.112.0.143:10086",
             "username": "admin",
-            "password": "Admin12345",
+            "password": "Astarta_2025",
             "is_active": True
         },
         "GLO": {
@@ -90,7 +90,7 @@ if ENV_LEVEL == 'prod':
             #"camera_ip": "10.20.40.250:10087",
             "camera_ip": "10.112.0.143:10087",
             "username": "admin",
-            "password": "Admin12345",
+            "password": "Astarta_2025",
             "is_active": True
         },
         "NVO": {
@@ -99,7 +99,7 @@ if ENV_LEVEL == 'prod':
             #"camera_ip": "10.20.105.250:10088",
             "camera_ip": "10.112.0.143:10088",
             "username": "admin",
-            "password": "Admin12345",
+            "password": "Astarta_2025",
             "is_active": True
         }
     }
@@ -123,18 +123,18 @@ elif ENV_LEVEL == 'dev':
         },
         "JCZ": {
             "Location": "Яреськи",
-            "type_cam": "dahua",
+            "type_cam": "hikvision",
             "camera_ip": "10.20.2.250",
             "username": "admin",
-            "password": "Admin12345",
+            "password": "Astarta_2025",
             "is_active": True
         },
         "GLO": {
             "Location": "Глобине",
             "type_cam": "hikvision",
-            "camera_ip": "10.20.40.250",
+            "camera_ip": "10.20.40.251",
             "username": "admin",
-            "password": "Admin12345",
+            "password": "Astarta_2025",
             "is_active": True
         },
         "NVO": {
@@ -142,7 +142,7 @@ elif ENV_LEVEL == 'dev':
             "type_cam": "hikvision",
             "camera_ip": "10.20.105.250",
             "username": "admin",
-            "password": "Admin12345",
+            "password": "Astarta_2025",
             "is_active": True
         }
     }    
@@ -150,7 +150,7 @@ elif ENV_LEVEL == 'local':
     cameras = {
         "JDN": {
             "Location": "Жданівка 8MP",
-            "type_cam": "hikvision",
+            "type_cam": "dahua",
             "camera_ip": "192.168.1.164",
             "username": "admin",
             "password": "Admin12345",
@@ -158,7 +158,7 @@ elif ENV_LEVEL == 'local':
         },
         "NRK": {
             "Location": "Наркевичі 4MP",
-            "type_cam": "hikvision",
+            "type_cam": "dahua",
             "camera_ip": "192.168.1.165",
             "username": "admin",
             "password": "Admin12345",
@@ -166,10 +166,10 @@ elif ENV_LEVEL == 'local':
         },
         "JCZ": {
             "Location": "Яреськи",
-            "type_cam": "dahua",
+            "type_cam": "hikvision",
             "camera_ip": "192.168.1.167",
             "username": "admin",
-            "password": "Admin12345",
+            "password": "Astarta_2025",
             "is_active": True
         },
         "NVO": {
@@ -177,7 +177,7 @@ elif ENV_LEVEL == 'local':
             "type_cam": "hikvision",
             "camera_ip": "192.168.1.168",
             "username": "admin",
-            "password": "Admin12345",
+            "password": "Astarta_2025",
             "is_active": True
         },
         "GLO": {
@@ -185,7 +185,7 @@ elif ENV_LEVEL == 'local':
             "type_cam": "hikvision",
             "camera_ip": "192.168.1.169",
             "username": "admin",
-            "password": "Admin12345",
+            "password": "Astarta_2025",
             "is_active": True
         }
     }
@@ -245,7 +245,7 @@ def send_photo_telegram(token, channel_id, path_photo: str, text: str):
     })
     
     if r.status_code != 200:
-        logger.error(f"[Telegram] ✗ Failed to send photo: status={r.status_code}, response={r.text}")
+        logger.error(f"[Telegram] [ERROR] Failed to send photo: status={r.status_code}, response={r.text}")
         raise Exception(f"post_text error: {r.status_code} - {r.text}")
 
 def send_document_telegram(token, channel_id, path_csv: str, text: str):
@@ -897,9 +897,27 @@ def detect_trash_v9(camera_key: str, img_path: str, num_thread, threshold=0.5):
         masked_image = cv2.bitwise_and(img, mask)
         logger.info(f'srvs_threads {num_thread}: detect_trash_v9: Camera {camera_key}: Applied mask for sugar conveyor belt')
         
-        # DEBUG: Збереження маскованого зображення для перевірки
-        if saveResults_ForMarkings:
-            debug_mask_path = f"images/for_marking/MASK_{file_name}.jpg"
+        # Збереження маскованого зображення для перевірки (окремий параметр)
+        if SAVE_MASKED_IMAGES:
+            debug_mask_path = f"images/for_marking_mask/{file_name}.jpg"
+            cv2.imwrite(debug_mask_path, masked_image)
+            logger.info(f'srvs_threads {num_thread}: DEBUG: Saved masked image to {debug_mask_path}')
+    elif camera_key=='JCZ':
+        # Створюємо ЧОРНУ маску (прибираємо все спочатку)
+        mask = np.zeros(img.shape, dtype=np.uint8)
+        
+        # Малюємо БІЛИЙ полігон для транспортерної стрічки (ЗАЛИШАЄМО область з цукром для аналізу)
+        # Координати для камери JCZ
+        roi_corners = np.array([[(1280, 1920), (1400, 225), (2420, 225), (2545, 1920)]], dtype=np.int32)
+        roi_mask_color = (255,) * img.shape[2]  # Білий колір - залишаємо для аналізу
+        cv2.fillPoly(mask, roi_corners, roi_mask_color)
+
+        masked_image = cv2.bitwise_and(img, mask)
+        logger.info(f'srvs_threads {num_thread}: detect_trash_v9: Camera {camera_key}: Applied mask for sugar conveyor belt')
+        
+        # Збереження маскованого зображення для перевірки (окремий параметр)
+        if SAVE_MASKED_IMAGES:
+            debug_mask_path = f"images/for_marking_mask/{file_name}.jpg"
             cv2.imwrite(debug_mask_path, masked_image)
             logger.info(f'srvs_threads {num_thread}: DEBUG: Saved masked image to {debug_mask_path}')
     elif camera_key=='NRK':
@@ -908,16 +926,52 @@ def detect_trash_v9(camera_key: str, img_path: str, num_thread, threshold=0.5):
         
         # Малюємо БІЛИЙ полігон для транспортерної стрічки (ЗАЛИШАЄМО область з цукром для аналізу)
         # Координати для камери NRK
-        roi_corners = np.array([[(330, 710), (500, 220), (790, 220), (995, 710)]], dtype=np.int32)
+        roi_corners = np.array([[(940, 2140), (1500, 700), (2400, 700), (3000, 2150)]], dtype=np.int32)
         roi_mask_color = (255,) * img.shape[2]  # Білий колір - залишаємо для аналізу
         cv2.fillPoly(mask, roi_corners, roi_mask_color)
 
         masked_image = cv2.bitwise_and(img, mask)
         logger.info(f'srvs_threads {num_thread}: detect_trash_v9: Camera {camera_key}: Applied mask for sugar conveyor belt')
         
-        # DEBUG: Збереження маскованого зображення для перевірки
-        if saveResults_ForMarkings:
-            debug_mask_path = f"images/for_marking/MASK_{file_name}.jpg"
+        # Збереження маскованого зображення для перевірки (окремий параметр)
+        if SAVE_MASKED_IMAGES:
+            debug_mask_path = f"images/for_marking_mask/{file_name}.jpg"
+            cv2.imwrite(debug_mask_path, masked_image)
+            logger.info(f'srvs_threads {num_thread}: DEBUG: Saved masked image to {debug_mask_path}')
+    elif camera_key=='NVO':
+        # Створюємо ЧОРНУ маску (прибираємо все спочатку)
+        mask = np.zeros(img.shape, dtype=np.uint8)
+        
+        # Малюємо БІЛИЙ полігон для транспортерної стрічки (ЗАЛИШАЄМО область з цукром для аналізу)
+        # Координати для камери NVO
+        roi_corners = np.array([[(540, 1070), (600, 570), (1500, 570), (1570, 1070)]], dtype=np.int32)
+        roi_mask_color = (255,) * img.shape[2]  # Білий колір - залишаємо для аналізу
+        cv2.fillPoly(mask, roi_corners, roi_mask_color)
+
+        masked_image = cv2.bitwise_and(img, mask)
+        logger.info(f'srvs_threads {num_thread}: detect_trash_v9: Camera {camera_key}: Applied mask for sugar conveyor belt')
+        
+        # Збереження маскованого зображення для перевірки (окремий параметр)
+        if SAVE_MASKED_IMAGES:
+            debug_mask_path = f"images/for_marking_mask/{file_name}.jpg"
+            cv2.imwrite(debug_mask_path, masked_image)
+            logger.info(f'srvs_threads {num_thread}: DEBUG: Saved masked image to {debug_mask_path}')
+    elif camera_key=='GLO':
+        # Створюємо ЧОРНУ маску (прибираємо все спочатку)
+        mask = np.zeros(img.shape, dtype=np.uint8)
+        
+        # Малюємо БІЛИЙ полігон для транспортерної стрічки (ЗАЛИШАЄМО область з цукром для аналізу)
+        # Координати для камери GLO
+        roi_corners = np.array([[(220, 1435), (465, 500), (1930, 455), (2100, 1435)]], dtype=np.int32)
+        roi_mask_color = (255,) * img.shape[2]  # Білий колір - залишаємо для аналізу
+        cv2.fillPoly(mask, roi_corners, roi_mask_color)
+
+        masked_image = cv2.bitwise_and(img, mask)
+        logger.info(f'srvs_threads {num_thread}: detect_trash_v9: Camera {camera_key}: Applied mask for sugar conveyor belt')
+        
+        # Збереження маскованого зображення для перевірки (окремий параметр)
+        if SAVE_MASKED_IMAGES:
+            debug_mask_path = f"images/for_marking_mask/{file_name}.jpg"
             cv2.imwrite(debug_mask_path, masked_image)
             logger.info(f'srvs_threads {num_thread}: DEBUG: Saved masked image to {debug_mask_path}')
     else:
@@ -965,7 +1019,7 @@ def detect_trash_v9(camera_key: str, img_path: str, num_thread, threshold=0.5):
     for box, label in zip(boxes, labels):
         if label == "trash":
             isTrash = True
-            logger.info(f"[{camera_key}] ✓ TRASH detected at {box}")
+            logger.info(f"[{camera_key}] [OK] TRASH detected at {box}")
             cv2.rectangle(im, box[0], box[1], (255, 0, 0), 6)
         elif label == "arm":  # Також позначаємо руки
             cv2.rectangle(im, box[0], box[1], (0, 255, 0), 4)  # Зелений прямокутник для руки
@@ -998,7 +1052,9 @@ def detect_trash_v9(camera_key: str, img_path: str, num_thread, threshold=0.5):
 
     # Сохранение изображений только один раз
     try:
-        output_image_path = f'{output_path}/images_{1:03d}.jpg'
+        # Створюємо папку якщо не існує
+        os.makedirs(output_path, exist_ok=True)
+        output_image_path = os.path.join(output_path, f'images_{num_thread:03d}.jpg')
         cv2.imwrite(output_image_path, img_with_text)
         logger.info(f"srvs_threads {num_thread}: Saved output image: {output_image_path}")
     except Exception as e:
@@ -1006,36 +1062,47 @@ def detect_trash_v9(camera_key: str, img_path: str, num_thread, threshold=0.5):
         import traceback
         logger.error(f"srvs_threads {num_thread}: Traceback: {traceback.format_exc()}")
     
-    # Зберігаємо розмічене фото в папку detected якщо є детекції
-    if saveDetectedImages and isTrash:  # Тільки для trash
-        try:
-            detected_path = f"images/detected/{file_name}.jpg"
-            cv2.imwrite(detected_path, img_with_text)
-            logger.info(f"Saved detected image: {detected_path}")
-        except Exception as e:
-            logger.error(f"Error saving detected image: {e}")
-    
-    # Зберігаємо for_marking якщо знайдено trash або arm
-    logger.info(f"DEBUG: saveResults_ForMarkings={saveResults_ForMarkings}, isTrash={isTrash}, n_arm={n_arm}, n_trash={n_trash}")
-    if saveResults_ForMarkings and isTrash:  # Тільки для trash
-        try:
-            save_path = f"images/for_marking/{file_name}.jpg"
-            cv2.imwrite(save_path, masked_image)
-            logger.info(f"Saved for_marking: {file_name}.jpg (trash: {n_trash}, arm: {n_arm})")
-            if os.path.exists(save_path):
-                logger.info(f"File successfully saved to {save_path}")
-            else:
-                logger.error(f"Failed to save file to {save_path}")
-        except Exception as e:
-            logger.error(f"Error saving for_marking: {e}")
+    # Зберігаємо фото у всі папки якщо знайдено мусор
+    if isTrash:  # Тільки для trash
+        # Зберігаємо розмічене фото в папку detected
+        if saveDetectedImages:
+            try:
+                os.makedirs("images/detected", exist_ok=True)
+                detected_path = f"images/detected/{file_name}.jpg"
+                cv2.imwrite(detected_path, img_with_text)
+                logger.info(f"Saved detected image: {detected_path}")
+            except Exception as e:
+                logger.error(f"Error saving detected image: {e}")
+        
+        # Зберігаємо оригінальне фото в папку for_marking
+        if saveResults_ForMarkings:
+            try:
+                os.makedirs("images/for_marking", exist_ok=True)
+                save_path = f"images/for_marking/{file_name}.jpg"
+                cv2.imwrite(save_path, img)  # Зберігаємо оригінальне зображення
+                logger.info(f"Saved for_marking: {file_name}.jpg (trash: {n_trash}, arm: {n_arm})")
+                if not os.path.exists(save_path):
+                    logger.error(f"Failed to save file to {save_path}")
+            except Exception as e:
+                logger.error(f"Error saving for_marking: {e}")
+        
+        # Зберігаємо масковане фото в папку for_marking_mask
+        if SAVE_MASKED_IMAGES:
+            try:
+                os.makedirs("images/for_marking_mask", exist_ok=True)
+                mask_path = f"images/for_marking_mask/{file_name}.jpg"
+                cv2.imwrite(mask_path, masked_image)
+                logger.info(f"Saved for_marking_mask: {file_name}.jpg")
+            except Exception as e:
+                logger.error(f"Error saving for_marking_mask: {e}")
     else:
-        logger.info(f"NOT saving for_marking: saveResults_ForMarkings={saveResults_ForMarkings}, condition={(isTrash or n_arm > 0)}")
+        logger.info(f"NOT saving images: isTrash={isTrash}, saveResults_ForMarkings={saveResults_ForMarkings}, saveDetectedImages={saveDetectedImages}")
 
     # Отправка результатов только при наличии мусора
     logger.info(f"[{camera_key}] srvs_threads {num_thread}: isTrash={isTrash}, n_trash={n_trash}, n_arm={n_arm}")
     
     if isTrash:
-        logger.info(f"[{camera_key}] srvs_threads {num_thread}: ✓✓✓ TRASH DETECTED! Starting notifications...")
+        logger.info(f"[{camera_key}] srvs_threads {num_thread}: [OK] TRASH DETECTED! Starting notifications...")
         
         # Step 1: Telegram notifications (independent, failures won't block PBI)
         logger.info(f"[{camera_key}] srvs_threads {num_thread}: Step 1/3: Sending to Telegram channels...")
@@ -1043,31 +1110,34 @@ def detect_trash_v9(camera_key: str, img_path: str, num_thread, threshold=0.5):
         
         # Main channel
         try:
-            logger.info(f"[{camera_key}] Sending to main channel: {channel_id}")
+            if not os.path.exists(output_image_path):
+                logger.error(f"[{camera_key}] [ERROR] Output image file not found: {output_image_path}")
+                raise FileNotFoundError(f"Output image file not found: {output_image_path}")
+            logger.info(f"[{camera_key}] Sending to main channel: {channel_id}, file: {output_image_path}")
             send_photo_telegram(token, channel_id, output_image_path, text)
-            logger.info(f"[{camera_key}] ✓ Main channel sent")
+            logger.info(f"[{camera_key}] [OK] Main channel sent")
             telegram_success_count += 1
         except Exception as e:
-            logger.error(f"[{camera_key}] ✗ Failed to send to main channel: {str(e)}")
+            logger.error(f"[{camera_key}] [ERROR] Failed to send to main channel: {str(e)}")
         
         # Kovnir channel
         try:
             logger.info(f"[{camera_key}] Sending to Kovnir channel: {channel_id_kovnir}")
             send_photo_telegram(token, channel_id_kovnir, output_image_path, text)
-            logger.info(f"[{camera_key}] ✓ Kovnir channel sent")
+            logger.info(f"[{camera_key}] [OK] Kovnir channel sent")
             telegram_success_count += 1
         except Exception as e:
-            logger.error(f"[{camera_key}] ✗ Failed to send to Kovnir channel: {str(e)}")
+            logger.error(f"[{camera_key}] [ERROR] Failed to send to Kovnir channel: {str(e)}")
         
         # JSZ channel (JDN only)
         if camera_key == 'JDN':
             try:
                 logger.info(f"[{camera_key}] Sending to JSZ channel: {channel_id_jsz}")
                 send_photo_telegram(token, channel_id_jsz, output_image_path, text)
-                logger.info(f"[{camera_key}] ✓ JSZ channel sent")
+                logger.info(f"[{camera_key}] [OK] JSZ channel sent")
                 telegram_success_count += 1
             except Exception as e:
-                logger.error(f"[{camera_key}] ✗ Failed to send to JSZ channel: {str(e)}")
+                logger.error(f"[{camera_key}] [ERROR] Failed to send to JSZ channel: {str(e)}")
         
         logger.info(f"[{camera_key}] srvs_threads {num_thread}: Step 1/3 Complete: {telegram_success_count} Telegram channel(s) sent successfully")
         
@@ -1076,14 +1146,14 @@ def detect_trash_v9(camera_key: str, img_path: str, num_thread, threshold=0.5):
             logger.info(f"[{camera_key}] srvs_threads {num_thread}: Step 2/3: Sending data to Power BI...")
             logger.info(f"[{camera_key}] PBI data: camera={camera_key}, trash_count={n_trash}, datetime={file_date} {file_time}")
             send_to_PBI(camera_key, n_trash, f'{file_date} {file_time}')
-            logger.info(f"[{camera_key}] srvs_threads {num_thread}: ✓ Step 2/3 Complete: Power BI sent")
+            logger.info(f"[{camera_key}] srvs_threads {num_thread}: [OK] Step 2/3 Complete: Power BI sent")
         except Exception as e:
-            logger.error(f"[{camera_key}] srvs_threads {num_thread}: ✗ ERROR sending to Power BI: {str(e)}")
+            logger.error(f"[{camera_key}] srvs_threads {num_thread}: [ERROR] ERROR sending to Power BI: {str(e)}")
             import traceback
             logger.error(f"[{camera_key}] PBI Traceback: {traceback.format_exc()}")
         
         # Final log
-        logger.info(f"[{camera_key}] srvs_threads {num_thread}: ✓ Step 3/3 Complete: Notification process finished for {output_image_path}")
+        logger.info(f"[{camera_key}] srvs_threads {num_thread}: [OK] Step 3/3 Complete: Notification process finished for {output_image_path}")
 
     if not isTrash:
         detection_current = time.time()
@@ -1125,8 +1195,8 @@ def send_to_PBI(camera_key, n_trash, current_datetime_str):
             print(f"[PBI] Response: {response.status_code}")
             
             if response.status_code == 200:
-                logger.info(f"[PBI] ✓ Data successfully sent to Power BI for camera {camera_key}")
-                print(f"[PBI] ✓ Successfully sent: {camera_key} - {factory_location}, trash={n_trash}")
+                logger.info(f"[PBI] [OK] Data successfully sent to Power BI for camera {camera_key}")
+                print(f"[PBI] [OK] Successfully sent: {camera_key} - {factory_location}, trash={n_trash}")
                 return
             elif response.status_code == 429:
                 wait_time = 2 ** attempt
@@ -1134,19 +1204,19 @@ def send_to_PBI(camera_key, n_trash, current_datetime_str):
                 print(f"[PBI] Rate limit hit, waiting {wait_time}s before retry...")
                 time.sleep(wait_time)  # Экспоненциальная задержка
             else:
-                logger.error(f"[PBI] ✗ Error sending data: status={response.status_code}, response={response.text}")
-                print(f"[PBI] ✗ Error {response.status_code}: {response.text[:200]}")
+                logger.error(f"[PBI] [ERROR] Error sending data: status={response.status_code}, response={response.text}")
+                print(f"[PBI] [ERROR] Error {response.status_code}: {response.text[:200]}")
                 break
         except requests.exceptions.RequestException as e:
-            logger.error(f"[PBI] ✗ Network error on attempt {attempt + 1}: {str(e)}")
-            print(f"[PBI] ✗ Network error: {str(e)}")
+            logger.error(f"[PBI] [ERROR] Network error on attempt {attempt + 1}: {str(e)}")
+            print(f"[PBI] [ERROR] Network error: {str(e)}")
             if attempt < retries - 1:
                 wait_time = 2 ** attempt
                 logger.info(f"[PBI] Waiting {wait_time}s before retry...")
                 time.sleep(wait_time)
     
-    logger.error(f"[PBI] ✗ FAILED to send data to Power BI after {retries} attempts for camera {camera_key}")
-    print(f"[PBI] ✗ FAILED after {retries} attempts: {camera_key}")
+    logger.error(f"[PBI] [ERROR] FAILED to send data to Power BI after {retries} attempts for camera {camera_key}")
+    print(f"[PBI] [ERROR] FAILED after {retries} attempts: {camera_key}")
 
 def repl_to_local_timezone(current_datetime_str, tz_original='UTC', tz_target="Europe/Kyiv"):
     original_timezone = pytz.timezone(tz_original)  # Замените на вашу исходную временную зону
@@ -1360,7 +1430,7 @@ class Service_Thread(Thread):
                 else:
                     # NOTE: This Service_Thread is deprecated, use continuous_capture_images instead
                     # Passing 'UNKNOWN' as camera_key since Service_Thread doesn't have it
-                    detect_trash_v9('UNKNOWN', new_path_file, self._num_thread, 0.1)
+                    detect_trash_v9('UNKNOWN', new_path_file, self._num_thread, 0.5)
                 detection_end = time.time()
                 diff_time_detect = detection_end-detection_start
                 logger.info('srvs_threads: detection %s: затраченное время на распознавание:: %s' %(self._num_thread, diff_time_detect) )
@@ -1644,12 +1714,12 @@ def capture_image(camera_key, cam_img_path, camera_config, timeout=10):
                         if chunk:
                             f.write(chunk)
                             
-                logger.info(f"[{camera_key}] ✓ Image saved using hikvisionapi: {cam_img_path}")
-                print(f"[{camera_key}] ✓ Successfully captured via hikvisionapi")
+                logger.info(f"[{camera_key}] [OK] Image saved using hikvisionapi: {cam_img_path}")
+                print(f"[{camera_key}] [OK] Successfully captured via hikvisionapi")
                 return cam_img_path
             except Exception as e:
-                logger.error(f"[{camera_key}] ✗ hikvisionapi error: {e}")
-                print(f"[{camera_key}] ✗ hikvisionapi failed: {e}")
+                logger.error(f"[{camera_key}] [ERROR] hikvisionapi error: {e}")
+                print(f"[{camera_key}] [ERROR] hikvisionapi failed: {e}")
                 
                 # Спробуємо простий RTSP
                 try:
@@ -1673,14 +1743,14 @@ def capture_image(camera_key, cam_img_path, camera_config, timeout=10):
                         
                         if ret and frame is not None:
                             cv2.imwrite(cam_img_path, frame)
-                            logger.info(f"[{camera_key}] ✓ Image saved from RTSP: {cam_img_path}")
-                            print(f"[{camera_key}] ✓ Successfully captured via RTSP")
+                            logger.info(f"[{camera_key}] [OK] Image saved from RTSP: {cam_img_path}")
+                            print(f"[{camera_key}] [OK] Successfully captured via RTSP")
                             return cam_img_path
                         else:
                             logger.warning(f"[{camera_key}] RTSP capture failed: ret={ret}, frame={'None' if frame is None else 'OK'}")
                 except Exception as e:
-                    logger.error(f"[{camera_key}] ✗ RTSP error: {e}")
-                    print(f"[{camera_key}] ✗ RTSP failed: {e}")
+                    logger.error(f"[{camera_key}] [ERROR] RTSP error: {e}")
+                    print(f"[{camera_key}] [ERROR] RTSP failed: {e}")
                     
             return None
         else:  # dahua
@@ -1693,17 +1763,17 @@ def capture_image(camera_key, cam_img_path, camera_config, timeout=10):
         if response and response.status_code == 200:
             with open(cam_img_path, 'wb') as f:
                 f.write(response.content)
-            logger.info(f"[{camera_key}] ✓ Image saved: {cam_img_path}")
-            print(f"[{camera_key}] ✓ Successfully captured")
+            logger.info(f"[{camera_key}] [OK] Image saved: {cam_img_path}")
+            print(f"[{camera_key}] [OK] Successfully captured")
             return cam_img_path
         else:
             status = response.status_code if response else "No response"
-            logger.error(f"[{camera_key}] ✗ Failed to get image: {status}")
-            print(f"[{camera_key}] ✗ Capture failed: {status}")
+            logger.error(f"[{camera_key}] [ERROR] Failed to get image: {status}")
+            print(f"[{camera_key}] [ERROR] Capture failed: {status}")
             return None
     except Exception as e:
-        logger.error(f"[{camera_key}] ✗ Exception capturing image: {e}")
-        print(f"[{camera_key}] ✗ Exception: {e}")
+        logger.error(f"[{camera_key}] [ERROR] Exception capturing image: {e}")
+        print(f"[{camera_key}] [ERROR] Exception: {e}")
         return None
 
 # Continuous image capture
@@ -1726,7 +1796,7 @@ def continuous_capture_images(camera_key, cam_img_path, camera_config, interval=
             if img_path:
                 image_queue.put((camera_key, img_path))
                 consecutive_errors = 0  # Скидаємо лічильник при успіху
-                logger.info(f"[{camera_key}] ✓ Image captured and queued successfully")
+                logger.info(f"[{camera_key}] [OK] Image captured and queued successfully")
             else:
                 consecutive_errors += 1
                 logger.warning(f"Camera {camera_key}: Failed to capture image ({consecutive_errors}/{max_consecutive_errors})")
@@ -1734,7 +1804,7 @@ def continuous_capture_images(camera_key, cam_img_path, camera_config, interval=
                 if consecutive_errors >= max_consecutive_errors:
                     logger.error(f"Camera {camera_key}: Too many consecutive errors, pausing for {pause_after_errors}s")
                     send_text_telegram(TELEGRAM_TOKEN, TELEGRAM_CHANNEL_ID, 
-                                     f"⚠️ Камера {camera_key} ({camera_config['Location']}) недоступна після {max_consecutive_errors} спроб. Пауза {pause_after_errors}с")
+                                     f"[WARNING] Камера {camera_key} ({camera_config['Location']}) недоступна після {max_consecutive_errors} спроб. Пауза {pause_after_errors}с")
                     time.sleep(pause_after_errors)
                     consecutive_errors = 0  # Скидаємо лічильник після паузи
                     logger.info(f"Camera {camera_key}: Resuming capture attempts after pause")
@@ -1878,7 +1948,7 @@ def process_detection(camera_key, cam_img_file_path, path_for_detections,num_thr
             elif model_version == 8:
                 detect_trash_v7(new_path_file, num_thread, detection_start)
             else:
-                detect_trash_v9(camera_key, new_path_file, num_thread, 0.1)
+                detect_trash_v9(camera_key, new_path_file, num_thread, 0.5)
         os.remove(new_path_file)
         end_time = time.time()
         logger.info(f"Thread-{num_thread}: Обработка завершена за {end_time - detection_start:.2f} секунд")

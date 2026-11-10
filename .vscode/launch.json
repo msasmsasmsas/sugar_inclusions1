@@ -1,0 +1,56 @@
+{
+    "version": "0.2.0",
+    "configurations": [
+        {
+            "name": "Python: Sugar Inclusions (Dev)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/predict_yolo5.py",
+            "console": "integratedTerminal",
+            "env": {
+                "ENV_LEVEL": "dev",
+                "USE_DB": "false",
+                "MODEL_VERSION": "9",
+                "SAVE_RESULTS_FOR_MARKINGS": "true",
+                "SAVE_DETECTED_IMAGES": "true",
+                "SHOW_RESULTS": "true",
+                "SAVE_RESULTS": "false",
+                "NUM_DETECTION_THREADS": "5"
+            }
+        },
+        {
+            "name": "Python: Sugar Inclusions (Prod Simulation)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/predict_yolo5.py",
+            "console": "integratedTerminal",
+            "env": {
+                "ENV_LEVEL": "prod",
+                "USE_DB": "true",
+                "MODEL_VERSION": "9",
+                "SAVE_RESULTS_FOR_MARKINGS": "false",
+                "SAVE_DETECTED_IMAGES": "true",
+                "SHOW_RESULTS": "false",
+                "SAVE_RESULTS": "false",
+                "NUM_DETECTION_THREADS": "10"
+            }
+        },
+        {
+            "name": "Python: Sugar Inclusions (Test YOLOv5)",
+            "type": "python",
+            "request": "launch",
+            "program": "${workspaceFolder}/predict_yolo5.py",
+            "console": "integratedTerminal",
+            "env": {
+                "ENV_LEVEL": "dev",
+                "USE_DB": "false",
+                "MODEL_VERSION": "5",
+                "SAVE_RESULTS_FOR_MARKINGS": "true",
+                "SAVE_DETECTED_IMAGES": "true",
+                "SHOW_RESULTS": "true",
+                "SAVE_RESULTS": "false",
+                "NUM_DETECTION_THREADS": "3"
+            }
+        }
+    ]
+}

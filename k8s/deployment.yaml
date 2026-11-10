@@ -1,0 +1,99 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: sugar-inclusions
+  namespace: default
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: sugar-inclusions
+  template:
+    metadata:
+      labels:
+        app: sugar-inclusions
+    spec:
+      containers:
+      - name: sugar-inclusions
+        image: your-registry/sugar-inclusions:latest
+        imagePullPolicy: Always
+        ports:
+        - containerPort: 81
+        
+        # Змінні оточення з ConfigMap
+        envFrom:
+        - configMapRef:
+            name: sugar-inclusions-config
+        
+        # Додаткові змінні оточення (секрети)
+        env:
+        # БД секрети
+        - name: DB_HOST
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db-host
+        - name: DB_PORT
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db-port
+        - name: DB_USER
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db-user
+        - name: DB_PASS
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db-pass
+        - name: DB_NAME
+          valueFrom:
+            secretKeyRef:
+              name: db-credentials
+              key: db-name
+        # Telegram секрети
+        - name: TELEGRAM_TOKEN
+          valueFrom:
+            secretKeyRef:
+              name: sugar-inclusions-secrets
+              key: telegram-token
+        - name: TELEGRAM_CHANNEL_ID
+          valueFrom:
+            secretKeyRef:
+              name: sugar-inclusions-secrets
+              key: telegram-channel-id
+        - name: TELEGRAM_CHANNEL_ID_KOVNIR
+          valueFrom:
+            secretKeyRef:
+              name: sugar-inclusions-secrets
+              key: telegram-channel-id-kovnir
+        - name: TELEGRAM_CHANNEL_ID_JSZ
+          valueFrom:
+            secretKeyRef:
+              name: sugar-inclusions-secrets
+              key: telegram-channel-id-jsz
+        
+        # Монтування волюмів
+        volumeMounts:
+        - name: images
+          mountPath: /sugar/images
+        - name: output
+          mountPath: /sugar/output
+        
+        resources:
+          requests:
+            memory: "2Gi"
+            cpu: "1"
+          limits:
+            memory: "4Gi"
+            cpu: "2"
+      
+      volumes:
+      - name: images
+        persistentVolumeClaim:
+          claimName: sugar-images-pvc
+      - name: output
+        persistentVolumeClaim:
+          claimName: sugar-output-pvc

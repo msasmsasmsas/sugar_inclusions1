@@ -1,0 +1,37 @@
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: sugar-inclusions-config
+  namespace: default
+data:
+  # Рівень оточення
+  ENV_LEVEL: "prod"
+  
+  # Використання бази даних
+  USE_DB: "true"
+  
+  # Версія моделі YOLO
+  MODEL_VERSION: "9"
+  
+  # Збереження результатів
+  SAVE_RESULTS_FOR_MARKINGS: "false"
+  SAVE_DETECTED_IMAGES: "false"
+  SAVE_MASKED_IMAGES: "false"
+  
+  # Показ результатів
+  SHOW_RESULTS: "false"
+  SAVE_RESULTS: "false"
+  
+  # Періоди ротації
+  PERIOD_ROTATION: "0.9"
+  CSV_ROTATION: "1800"
+  
+  # Кількість потоків детекції
+  NUM_DETECTION_THREADS: "10"
+  
+  # Налаштування активності камер (формат: JDN=true,NRK=false,...)
+  # Вимкніть недоступні камери, щоб уникнути timeout
+  CAMERAS_ACTIVE_STATUS: ""
+  
+  # Рівень логування (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+  LOG_LEVEL: "DEBUG"

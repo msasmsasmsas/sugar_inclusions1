@@ -1,0 +1,67 @@
+version: '3.8'
+
+services:
+  sugar-inclusions:
+    build: .
+    image: sugar-inclusions:dev
+    container_name: sugar-inclusions-dev
+    environment:
+      # БД налаштування з dev.env
+      - DB_HOST=10.43.119.82
+      - DB_PORT=3306
+      - DB_USER=root
+      - DB_PASS=d4Pk0WcZ7z
+      - DB_NAME=ai_sugar_inclusions
+      
+      # Основні налаштування
+      - ENV_LEVEL=dev
+      - USE_DB=false  # Відключаємо БД для локального тестування
+      - MODEL_VERSION=v9
+      
+      # Налаштування збереження
+      - SAVE_RESULTS_FOR_MARKINGS=true
+      - SAVE_DETECTED_IMAGES=true
+      - SHOW_RESULTS=false
+      - SAVE_RESULTS=false
+      
+      # Налаштування потоків
+      - NUM_DETECTION_THREADS=10
+      - PERIOD_ROTATION=10
+      - CSV_ROTATION=10
+      
+      # Telegram (замініть на реальні)
+      - TELEGRAM_TOKEN=${TELEGRAM_TOKEN:-YOUR_TOKEN}
+      - TELEGRAM_CHANNEL_ID=${TELEGRAM_CHANNEL_ID:-YOUR_CHANNEL}
+      - TELEGRAM_CHANNEL_ID_KOVNIR=${TELEGRAM_CHANNEL_ID_KOVNIR:-YOUR_CHANNEL}
+      - TELEGRAM_CHANNEL_ID_JSZ=${TELEGRAM_CHANNEL_ID_JSZ:-YOUR_CHANNEL}
+    
+    volumes:
+      - ./images:/sugar/images
+      - ./output:/sugar/output
+      - ./src:/sugar/src  # Для гарячого перезавантаження під час розробки
+    
+    # Для інтерактивного режиму
+    stdin_open: true
+    tty: true
+    
+    # Мережа (якщо потрібно підключення до локальної БД)
+    network_mode: host  # Або використовуйте bridge з extra_hosts
+    
+    # Або для bridge мережі з доступом до локальної БД:
+    # extra_hosts:
+    #   - "host.docker.internal:host-gateway"
+
+# Якщо потрібна локальна MariaDB
+  # mariadb:
+  #   image: mariadb:10.6
+  #   container_name: sugar-mariadb-dev
+  #   environment:
+  #     - MYSQL_ROOT_PASSWORD=d4Pk0WcZ7z
+  #     - MYSQL_DATABASE=ai_sugar_inclusions
+  #   ports:
+  #     - "3306:3306"
+  #   volumes:
+  #     - mariadb_data:/var/lib/mysql
+
+# volumes:
+#   mariadb_data:

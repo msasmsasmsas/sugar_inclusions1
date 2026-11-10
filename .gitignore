@@ -1,0 +1,24 @@
+# Секрети і файли оточення
+.env
+.env.*
+*.env
+env.example
+
+# Зображення
+*.jpg
+*.jpeg
+*.png
+*.gif
+*.webp
+*.bmp
+
+# Локальне оточення, кеш і логи
+venv/
+__pycache__/
+*.py[cod]
+*.log
+*.log.*
+
+# Маніфести з секретами
+k8s/secrets.yaml
+k8s/db-secret.yaml
